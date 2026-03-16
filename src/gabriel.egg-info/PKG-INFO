@@ -1,0 +1,456 @@
+Metadata-Version: 2.4
+Name: gabriel
+Version: 1.2.0
+Summary: LLM-based library to measure quantitative attributes on qualitative data – supports OpenAI, DeepSeek, Qwen, Ollama and any OpenAI-compatible backend
+Author: Hemanth Asirvatham, Elliott Mokski
+License:                                  Apache License
+                                   Version 2.0, January 2004
+                                http://www.apache.org/licenses/
+        
+           TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+        
+           1. Definitions.
+        
+              "License" shall mean the terms and conditions for use, reproduction,
+              and distribution as defined by Sections 1 through 9 of this document.
+        
+              "Licensor" shall mean the copyright owner or entity authorized by
+              the copyright owner that is granting the License.
+        
+              "Legal Entity" shall mean the union of the acting entity and all
+              other entities that control, are controlled by, or are under common
+              control with that entity. For the purposes of this definition,
+              "control" means (i) the power, direct or indirect, to cause the
+              direction or management of such entity, whether by contract or
+              otherwise, or (ii) ownership of fifty percent (50%) or more of the
+              outstanding shares, or (iii) beneficial ownership of such entity.
+        
+              "You" (or "Your") shall mean an individual or Legal Entity
+              exercising permissions granted by this License.
+        
+              "Source" form shall mean the preferred form for making modifications,
+              including but not limited to software source code, documentation
+              source, and configuration files.
+        
+              "Object" form shall mean any form resulting from mechanical
+              transformation or translation of a Source form, including but
+              not limited to compiled object code, generated documentation,
+              and conversions to other media types.
+        
+              "Work" shall mean the work of authorship, whether in Source or
+              Object form, made available under the License, as indicated by a
+              copyright notice that is included in or attached to the work
+              (an example is provided in the Appendix below).
+        
+              "Derivative Works" shall mean any work, whether in Source or Object
+              form, that is based on (or derived from) the Work and for which the
+              editorial revisions, annotations, elaborations, or other modifications
+              represent, as a whole, an original work of authorship. For the purposes
+              of this License, Derivative Works shall not include works that remain
+              separable from, or merely link (or bind by name) to the interfaces of,
+              the Work and Derivative Works thereof.
+        
+              "Contribution" shall mean any work of authorship, including
+              the original version of the Work and any modifications or additions
+              to that Work or Derivative Works thereof, that is intentionally
+              submitted to Licensor for inclusion in the Work by the copyright owner
+              or by an individual or Legal Entity authorized to submit on behalf of
+              the copyright owner. For the purposes of this definition, "submitted"
+              means any form of electronic, verbal, or written communication sent
+              to the Licensor or its representatives, including but not limited to
+              communication on electronic mailing lists, source code control systems,
+              and issue tracking systems that are managed by, or on behalf of, the
+              Licensor for the purpose of discussing and improving the Work, but
+              excluding communication that is conspicuously marked or otherwise
+              designated in writing by the copyright owner as "Not a Contribution."
+        
+              "Contributor" shall mean Licensor and any individual or Legal Entity
+              on behalf of whom a Contribution has been received by Licensor and
+              subsequently incorporated within the Work.
+        
+           2. Grant of Copyright License. Subject to the terms and conditions of
+              this License, each Contributor hereby grants to You a perpetual,
+              worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+              copyright license to reproduce, prepare Derivative Works of,
+              publicly display, publicly perform, sublicense, and distribute the
+              Work and such Derivative Works in Source or Object form.
+        
+           3. Grant of Patent License. Subject to the terms and conditions of
+              this License, each Contributor hereby grants to You a perpetual,
+              worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+              (except as stated in this section) patent license to make, have made,
+              use, offer to sell, sell, import, and otherwise transfer the Work,
+              where such license applies only to those patent claims licensable
+              by such Contributor that are necessarily infringed by their
+              Contribution(s) alone or by combination of their Contribution(s)
+              with the Work to which such Contribution(s) was submitted. If You
+              institute patent litigation against any entity (including a
+              cross-claim or counterclaim in a lawsuit) alleging that the Work
+              or a Contribution incorporated within the Work constitutes direct
+              or contributory patent infringement, then any patent licenses
+              granted to You under this License for that Work shall terminate
+              as of the date such litigation is filed.
+        
+           4. Redistribution. You may reproduce and distribute copies of the
+              Work or Derivative Works thereof in any medium, with or without
+              modifications, and in Source or Object form, provided that You
+              meet the following conditions:
+        
+              (a) You must give any other recipients of the Work or
+                  Derivative Works a copy of this License; and
+        
+              (b) You must cause any modified files to carry prominent notices
+                  stating that You changed the files; and
+        
+              (c) You must retain, in the Source form of any Derivative Works
+                  that You distribute, all copyright, patent, trademark, and
+                  attribution notices from the Source form of the Work,
+                  excluding those notices that do not pertain to any part of
+                  the Derivative Works; and
+        
+              (d) If the Work includes a "NOTICE" text file as part of its
+                  distribution, then any Derivative Works that You distribute must
+                  include a readable copy of the attribution notices contained
+                  within such NOTICE file, excluding those notices that do not
+                  pertain to any part of the Derivative Works, in at least one
+                  of the following places: within a NOTICE text file distributed
+                  as part of the Derivative Works; within the Source form or
+                  documentation, if provided along with the Derivative Works; or,
+                  within a display generated by the Derivative Works, if and
+                  wherever such third-party notices normally appear. The contents
+                  of the NOTICE file are for informational purposes only and
+                  do not modify the License. You may add Your own attribution
+                  notices within Derivative Works that You distribute, alongside
+                  or as an addendum to the NOTICE text from the Work, provided
+                  that such additional attribution notices cannot be construed
+                  as modifying the License.
+        
+              You may add Your own copyright statement to Your modifications and
+              may provide additional or different license terms and conditions
+              for use, reproduction, or distribution of Your modifications, or
+              for any such Derivative Works as a whole, provided Your use,
+              reproduction, and distribution of the Work otherwise complies with
+              the conditions stated in this License.
+        
+           5. Submission of Contributions. Unless You explicitly state otherwise,
+              any Contribution intentionally submitted for inclusion in the Work
+              by You to the Licensor shall be under the terms and conditions of
+              this License, without any additional terms or conditions.
+              Notwithstanding the above, nothing herein shall supersede or modify
+              the terms of any separate license agreement you may have executed
+              with Licensor regarding such Contributions.
+        
+           6. Trademarks. This License does not grant permission to use the trade
+              names, trademarks, service marks, or product names of the Licensor,
+              except as required for reasonable and customary use in describing the
+              origin of the Work and reproducing the content of the NOTICE file.
+        
+           7. Disclaimer of Warranty. Unless required by applicable law or
+              agreed to in writing, Licensor provides the Work (and each
+              Contributor provides its Contributions) on an "AS IS" BASIS,
+              WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+              implied, including, without limitation, any warranties or conditions
+              of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+              PARTICULAR PURPOSE. You are solely responsible for determining the
+              appropriateness of using or redistributing the Work and assume any
+              risks associated with Your exercise of permissions under this License.
+        
+           8. Limitation of Liability. In no event and under no legal theory,
+              whether in tort (including negligence), contract, or otherwise,
+              unless required by applicable law (such as deliberate and grossly
+              negligent acts) or agreed to in writing, shall any Contributor be
+              liable to You for damages, including any direct, indirect, special,
+              incidental, or consequential damages of any character arising as a
+              result of this License or out of the use or inability to use the
+              Work (including but not limited to damages for loss of goodwill,
+              work stoppage, computer failure or malfunction, or any and all
+              other commercial damages or losses), even if such Contributor
+              has been advised of the possibility of such damages.
+        
+           9. Accepting Warranty or Additional Liability. While redistributing
+              the Work or Derivative Works thereof, You may choose to offer,
+              and charge a fee for, acceptance of support, warranty, indemnity,
+              or other liability obligations and/or rights consistent with this
+              License. However, in accepting such obligations, You may act only
+              on Your own behalf and on Your sole responsibility, not on behalf
+              of any other Contributor, and only if You agree to indemnify,
+              defend, and hold each Contributor harmless for any liability
+              incurred by, or claims asserted against, such Contributor by reason
+              of your accepting any such warranty or additional liability.
+        
+           END OF TERMS AND CONDITIONS
+        
+           APPENDIX: How to apply the Apache License to your work.
+        
+              To apply the Apache License to your work, attach the following
+              boilerplate notice, with the fields enclosed by brackets "[]"
+              replaced with your own identifying information. (Don't include
+              the brackets!)  The text should be enclosed in the appropriate
+              comment syntax for the file format. We also recommend that a
+              file or class name and description of purpose be included on the
+              same "printed page" as the copyright notice for easier
+              identification within third-party archives.
+        
+           Copyright [yyyy] [name of copyright owner]
+        
+           Licensed under the Apache License, Version 2.0 (the "License");
+           you may not use this file except in compliance with the License.
+           You may obtain a copy of the License at
+        
+               http://www.apache.org/licenses/LICENSE-2.0
+        
+           Unless required by applicable law or agreed to in writing, software
+           distributed under the License is distributed on an "AS IS" BASIS,
+           WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+           See the License for the specific language governing permissions and
+           limitations under the License.
+        
+Project-URL: Homepage, https://github.com/openai/GABRIEL
+Project-URL: Repository, https://github.com/openai/GABRIEL
+Project-URL: Documentation, https://github.com/openai/GABRIEL/blob/main/README.md
+Project-URL: Issues, https://github.com/openai/GABRIEL/issues
+Keywords: llm,gpt,openai,deepseek,qwen,ollama,multi-model,ai,research,academic,econ,economics,econometrics,machine learning,science,social science,text analysis
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Topic :: Software Development :: Libraries
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: NOTICE
+Requires-Dist: openai>=1.0.0
+Requires-Dist: pandas>=1.0.0
+Requires-Dist: numpy>=1.18.0
+Requires-Dist: Jinja2>=3.0.0
+Requires-Dist: tqdm>=4.40.0
+Requires-Dist: aiohttp>=3.7.0
+Requires-Dist: aiolimiter>=1.0.0
+Requires-Dist: httpx>=0.23.0
+Requires-Dist: plotly>=5.0.0
+Requires-Dist: matplotlib>=3.6.0
+Requires-Dist: requests>=2.0.0
+Requires-Dist: scipy>=1.8.0
+Requires-Dist: tiktoken>=0.2.0
+Requires-Dist: pydantic>=1.10.0
+Requires-Dist: pypdf>=4.0.0
+Requires-Dist: python-docx>=1.1.0
+Requires-Dist: statsmodels>=0.14.0
+Provides-Extra: dev
+Requires-Dist: build>=1.0.0; extra == "dev"
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: ruff>=0.4.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Provides-Extra: analysis
+Requires-Dist: tabulate>=0.9.0; extra == "analysis"
+Provides-Extra: notebook
+Requires-Dist: ipython>=7.0.0; extra == "notebook"
+Dynamic: license-file
+
+# GABRIEL
+
+**GABRIEL** (Generalized Attribute Based Ratings Information Extraction Library) turns messy qualitative corpora into analysis-ready datasets with GPT. It handles prompting, batching, retries, checkpointing, and audit trails so you can treat “ask the model” workflows like any other measurement instrument. From rating rhetoric across a million speeches to matching product catalogs, you focus on the research question while GABRIEL handles the operations.
+
+📓 **Tutorial notebook** (start here!): [GABRIEL Colab notebook](https://colab.research.google.com/drive/1RMUeAWACpViqiUMlPMMwPTKyGU-OX756?usp=sharing) — also available as `gabriel_tutorial_notebook.ipynb` in this repo if you’d like to download and run it locally.
+
+You can install the GABRIEL Python library from [PyPI](https://pypi.org/project/openai-gabriel/) with `pip install openai-gabriel` and then `import gabriel`.
+
+Read our blog post [here](https://openai.com/index/scaling-social-science-research/), our paper with validation experiments and applied examples [here](http://www.nber.org/papers/w34834), and submit feedback / bugs / feature requests [here](https://forms.gle/RKnBskuiZ64Wt9D66).
+
+## Table of contents
+
+- [Why GABRIEL?](#why-gabriel)
+- [What can you do with GABRIEL?](#what-can-you-do-with-gabriel)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Task highlights](#task-highlights)
+- [Detailed usage](#detailed-usage)
+- [Multimodal data and web search](#multimodal-data-and-web-search)
+- [Custom prompts and model routing](#custom-prompts-and-model-routing)
+- [Saving, logging, and resuming](#saving-logging-and-resuming)
+- [Development and testing](#development-and-testing)
+- [Citation](#citation)
+
+## Why GABRIEL?
+
+Most of the evidence social scientists and analysts care about lives in unstructured formats: interviews, speeches, transcripts, product photos, archival scans. Modern GPT models can judge attributes, extract facts, and reason about this material with high fidelity, but building robust pipelines is still tedious. GABRIEL provides:
+
+- 🧠 **Human-level comprehension on demand** – express the attribute the way you would brief a human coder; GABRIEL packages the prompt, context, and retries for you.
+- 📊 **Quantitative outputs** – ratings (0–100), grounded comparisons, classifications, and structured extractions return as tidy DataFrames with reproducible settings.
+- ⚙️ **Operational tooling** – automatic parallelism (hundreds of concurrent calls), resumable runs, raw response logs, and helper UIs make it safe to scale to very large corpora.
+- 🧰 **Extensibility** – swap instructions with `additional_instructions`, bring your own templates, or drop down to `gabriel.whatever` + custom `response_fn` for bespoke prompts while still reusing the infrastructure.
+
+The tutorial notebook walks through these ideas step-by-step—from setting up an API key to running multimodal analyses—so skim this README, then dive into the notebook for the full guided tour.
+
+## What can you do with GABRIEL?
+
+### A) Measure attributes on qualitative data
+
+| Function | Purpose & Output Scale | Example Use |
+| --- | --- | --- |
+| `gabriel.rate` | Asks GPT to score each text / image / audio / item on natural language attributes. Output = 0-100 rating. | Measure “populist rhetoric” in a speech; “toxicity” of tweets; “luxury” in ad images. |
+| `gabriel.rank` | Pairwise comparisons between texts yields ELO-like attribute ratings. Output = grounded, relative z scores for each text. | Rank technologies by “bulkiness” or artworks by “fine brushwork”. |
+| `gabriel.classify` | Classifies texts / images / audio / items on whether provided labels apply. Output = one or more classes per item. | Tag news articles, product photos, or interview clips into topical categories. |
+| `gabriel.extract` | Structured fact extraction on each item. Output = string / numeric values. | For each product, provide the “company”, “CEO”, and “year of invention”. |
+| `gabriel.discover` | Discovers natural language features which discriminate two classes of data. | Identify what distinguishes 5 star vs. 1 star reviews or successful vs. failed startups. |
+
+### B) Clean data
+
+| Function | Purpose & Output Scale | Example Use |
+| --- | --- | --- |
+| `gabriel.merge` | Creates crosswalks. Output = merged table with GPT-matched identifiers. | Match two distinct job title directories; link patent titles to product names. |
+| `gabriel.deduplicate` | Detects conceptual duplicates. Maps all duplicates to one representative term. | Collapse “F-18”, “Super Hornet Fighter Jet”, “f-18 hornet” into “F-18”. |
+| `gabriel.filter` | High-throughput boolean screening. Outputs items which meet natural language condition. | Subset 18M Wikipedia titles to only technologies. |
+| `gabriel.deidentify` | Replaces PII with realistic, consistent fake PII. Outputs anonymized text + mapping. | Replace names, employers, addresses before sharing interview corpora. |
+
+### C) Helper tools
+
+| Function | Purpose & Output Scale | Example Use |
+| --- | --- | --- |
+| `gabriel.codify` | Passage coding: highlights snippets in text that match qualitative codes. | Flag sentences about “economic insecurity” in speeches; “stressors” mentioned in interview. |
+| `gabriel.compare` | Identifies similarities / differences between paired items. Output = list of differences. | Contrast op-eds from different districts; compare two ad campaigns. |
+| `gabriel.bucket` | Builds taxonomies from many terms. Output = bucket/cluster labels. | Group technologies, artworks, or HR complaints into emergent categories. |
+| `gabriel.seed` | Enforces a representative distribution / diversity of seeds. | Initialize unique personas that match US population distribution. |
+| `gabriel.poll` | Seeds personas, expands them into full biographies, and surveys them. | Simulate a synthetic opinion poll on policy, trust, and open-ended attitudes. |
+| `gabriel.ideate` | Generates many novel scientific theories and filters the cream of the crop. | Procure novel theories on inflation for potential research. |
+| `gabriel.debias` | Post-process measurements to remove inference bias. | Ensure GPT isn't guessing climate opinions in speeches based on general political lean. |
+| `gabriel.load` | Prepares a folder of text / image / audio files into a spreadsheet for use in GABRIEL. | Image directory converted into spreadsheet of file paths. |
+| `gabriel.view` | UI to view sample texts with ratings / passage coding. | Spot-check classify / rating outputs; view coded passages. |
+| `gabriel.paraphrase` | Rewrites texts consistently per instructions. | Summarize earnings call transcripts to remove company specifics. |
+| `gabriel.whatever` | Run any GPT prompts, but leverage GABRIEL's parallelization / checkpointing. | Any set of prompts; slots into any pipeline. |
+
+## Installation
+
+```bash
+pip install openai-gabriel
+
+# or install directly from GitHub
+pip install \
+  --force-reinstall \
+  git+https://github.com/openai/GABRIEL.git@main
+
+# then run import gabriel
+```
+
+Before running a GABRIEL call, declare your GPT API key:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+# or os.environ['OPENAI_API_KEY'] = "sk-..." inside a Jupyter notebook
+```
+
+## Quick start
+
+The tutorial notebook walks through many complete projects; here’s the minimal rating flow the notebook starts with. Paste this into Colab or a notebook cell so you can use `await` directly:
+
+```python
+import os
+import pandas as pd
+
+import gabriel
+
+PATH = os.path.expanduser("~/Documents/gabriel_runs")
+toy_data = pd.DataFrame(
+    {
+        "entity": [
+            "turkey",
+            "pumpkin pie",
+            "green bean casserole",
+            "cornbread",
+        ]
+    }
+)
+
+attributes = {
+    "savory taste": "How savory the dish is",
+    "sweet taste": "Dessert-like sweetness",
+    "tangy taste": "Notes of tartness or acidity",
+}
+
+rate_results = await gabriel.rate(
+    toy_data,
+    column_name="entity",
+    attributes=attributes,
+    save_dir=os.path.join(PATH, "toy_rate"),
+    model="gpt-5-mini",
+    n_runs=1,
+    modality="entity",
+    reset_files=True,
+)
+rate_results.head()
+```
+
+The helper returns a `pandas.DataFrame` with one column per attribute and writes raw model responses + configs to `save_dir`. Running the same code in a plain Python script just requires wrapping the coroutine with `asyncio.run(...)`.
+
+## Task highlights
+
+The tutorial notebook covers full projects end-to-end. The list below matches its main use cases so you can jump to the right helper quickly.
+
+### Measurement primitives
+- **`gabriel.rate`** – assign 0–100 scores per attribute across text, entities, images, audio, or web-sourced context.
+- **`gabriel.rank`** – pairwise tournaments that surface relative winners with grounded z-scores.
+- **`gabriel.classify`** – single- or multi-label tagging with label definitions and consensus columns.
+- **`gabriel.extract`** – turn passages or multimodal product cards into tidy tables with optional schemas.
+- **`gabriel.discover`** – contrast two labeled corpora to learn discriminating features.
+
+### Qualitative coding and review
+- **`gabriel.codify`** highlights snippets that match qualitative codes and pairs with **`gabriel.view`** for UI-based auditing.
+- **`gabriel.compare`** contrasts paired items (drafts, policies, campaigns) with concise differences/similarities.
+- **`gabriel.bucket`** groups terms/entities into emergent taxonomies that feed back into rate/classify flows.
+
+### Data prep and cleanup
+- **`gabriel.load`** converts folders of media into spreadsheets with clean IDs and file paths.
+- **`gabriel.merge`** / **`gabriel.deduplicate`** produce fuzzy joins and de-duplicated lists using embeddings plus GPT checks.
+- **`gabriel.filter`** screens large candidate lists with natural-language conditions.
+- **`gabriel.deidentify`** replaces PII with realistic stand-ins to protect privacy.
+
+### Ideation and custom prompts
+- **`gabriel.ideate`** and **`gabriel.seed`** generate diverse candidates before deeper measurement.
+- **`gabriel.whatever`** runs bespoke prompts (with optional web search or custom `response_fn`) while reusing retries, logging, and checkpointing.
+
+## Multimodal data and web search
+
+Set `modality` to `text`, `entity`, `pdf`, `image`, `audio`, or `web` on any measurement helper. Pair `gabriel.load` with folders of media to build the right DataFrame, and use `web_search=True` when GPT should gather context before rating or extracting. The tutorial’s county-level example shows how to chain web search → rating → mapping in one flow.
+
+## Custom prompts and model routing
+
+- Add clarifications with `additional_instructions` (e.g., mandate mutually exclusive labels).
+- Swap in your own Jinja `template_path` while keeping retries and checkpoints.
+- Drop to `gabriel.whatever` for fully custom prompts, attachments, or routing logic.
+
+## Saving, logging, and resuming
+
+Each run expands `save_dir` (tilde and environment variables supported), writes structured outputs (`file_name` CSV/Parquet), and saves raw model payloads under `responses/` with metadata for auditability. Leave `reset_files=False` to resume partially completed runs; delete the folder or pass `reset_files=True` to start fresh. `gabriel.view` reads these outputs for quick spot checks, and helpers like `gabriel.utils.mapmaker.MapMaker` can consume the same files for downstream visualization.
+
+## Development and testing
+
+Install development extras and run tests:
+
+```bash
+pip install -e .[dev]
+pytest
+```
+
+Tests rely on the built-in dummy responses, so no API key is necessary. Linting and type checks (`ruff`, `mypy`) are included in the dev extras.
+
+## Citation
+
+If you use GABRIEL in your research, please cite:
+
+- Asirvatham, H., Mokski, E., and Shleifer, A. (2026). *GPT as a Measurement Tool*. NBER Working Paper No. 34834.
+
+- Asirvatham, H. and Mokski, E. (2026). *GABRIEL: Generalized Attribute-Based Ratings Information Extraction Library* (software). GitHub repository: https://github.com/openai/GABRIEL
+
+## License
+
+GABRIEL is released under the Apache 2.0 License. See [LICENSE](LICENSE).
