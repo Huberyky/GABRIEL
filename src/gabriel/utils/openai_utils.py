@@ -124,9 +124,17 @@ except Exception:
     RateLimitError = Exception  # type: ignore
 
 from gabriel.utils.parsing import parse_json_with_status, safe_json
+from gabriel.core.providers import (
+    get_provider_api_key,
+    get_provider_base_url,
+    get_provider_config,
+    parse_model_provider,
+    supports_batch,
+    uses_chat_completions,
+)
 
-# single connection pool per process, keyed by base URL and created lazily
-_clients_async: Dict[Optional[str], openai.AsyncOpenAI] = {}
+# single connection pool per process, keyed by (base_url, api_key_prefix)
+_clients_async: Dict[Any, openai.AsyncOpenAI] = {}
 
 
 def _progress_bar(*args: Any, verbose: bool = True, **kwargs: Any):
@@ -179,16 +187,36 @@ def _get_client(
     base_url: Optional[str] = None,
     *,
     desired_parallelism: Optional[int] = None,
+    api_key: Optional[str] = None,
 ) -> openai.AsyncOpenAI:
     """Return a cached ``AsyncOpenAI`` client for ``base_url``.
 
     When ``base_url`` is ``None`` the default OpenAI endpoint is used.  A client
     is created on first use and reused for subsequent calls with the same base
-    URL to benefit from connection pooling.
+    URL and API key to benefit from connection pooling.
+
+    Parameters
+    ----------
+    base_url:
+        Optional API base URL (e.g. ``"https://api.deepseek.com/v1"``).
+        When ``None`` the OpenAI default or ``OPENAI_BASE_URL`` env-var is used.
+    desired_parallelism:
+        When provided the HTTP connection pool is sized to handle at least
+        this many concurrent requests.
+    api_key:
+        Optional explicit API key.  When provided it is passed directly to the
+        ``AsyncOpenAI`` constructor, overriding the ``OPENAI_API_KEY``
+        environment variable.  The first 8 characters are used as part of the
+        cache key so that different keys at the same base URL get separate
+        client instances.
     """
 
     url = base_url or os.getenv("OPENAI_BASE_URL")
-    client = _clients_async.get(url)
+    # Cache key includes a short prefix of the key so different credentials at
+    # the same base URL always get their own client instance.
+    key_hint = api_key[:8] if api_key else None
+    cache_key = (url, key_hint)
+    client = _clients_async.get(cache_key)
     desired_max_connections: Optional[int] = None
     needs_rebuild = client is None
     if desired_parallelism is not None and httpx is not None:
@@ -203,6 +231,8 @@ def _get_client(
         kwargs: Dict[str, Any] = {}
         if url:
             kwargs["base_url"] = url
+        if api_key:
+            kwargs["api_key"] = api_key
         if httpx is not None:
             try:
                 if (
@@ -223,7 +253,7 @@ def _get_client(
                 # Fall back to the SDK default if constructing the client fails.
                 pass
         client = openai.AsyncOpenAI(**kwargs)
-        _clients_async[url] = client
+        _clients_async[cache_key] = client
     return client
 
 # Estimated output tokens per prompt used for cost estimation when no cutoff is specified.
@@ -368,10 +398,31 @@ def _get_tokenizer(model_name: str) -> tiktoken.Encoding:
 
 
 def _uses_legacy_system_instruction(model_name: str) -> bool:
-    """Return True when the model expects legacy system-message prompts."""
+    """Return True when the model expects legacy system-message prompts.
 
-    lowered = (model_name or "").lower()
-    return lowered.startswith("gpt-3") or lowered.startswith("gpt-4")
+    OpenAI's GPT-3/GPT-4 families use the classic ``{"role": "system", ...}``
+    system-message format and accept a ``temperature`` parameter.  All other
+    OpenAI models (GPT-5, o3/o4, etc.) use the newer Responses API layout.
+
+    Non-OpenAI providers (DeepSeek, Qwen, Ollama, …) are routed through the
+    Chat Completions endpoint (not the Responses API), so this flag is only
+    meaningful for the OpenAI provider.  For non-OpenAI models we return
+    ``True`` so that ``temperature`` is passed through and a system message is
+    included, both of which are universally supported by OpenAI-compatible
+    servers.
+    """
+    # Strip any provider prefix before checking.
+    _, bare = parse_model_provider(model_name or "")
+    lowered = bare.lower()
+    # Classic OpenAI families that use the legacy layout.
+    if lowered.startswith("gpt-3") or lowered.startswith("gpt-4"):
+        return True
+    # Non-OpenAI models routed via chat completions – treat as legacy so that
+    # temperature and system messages are included.
+    provider, _ = parse_model_provider(model_name or "")
+    if provider != "openai":
+        return True
+    return False
 
 
 def _is_audio_model(model_name: str) -> bool:
@@ -460,6 +511,18 @@ MODEL_PRICING: Dict[str, Dict[str, float]] = {
         "output": 8.00,
         "batch": 0.5,
     },
+    # -----------------------------------------------------------------------
+    # DeepSeek models (USD per million tokens, as of 2025)
+    # -----------------------------------------------------------------------
+    "deepseek-chat": {"input": 0.07, "cached_input": 0.014, "output": 1.10, "batch": 1.0},
+    "deepseek-reasoner": {"input": 0.55, "cached_input": 0.14, "output": 2.19, "batch": 1.0},
+    # -----------------------------------------------------------------------
+    # Alibaba Qwen models via DashScope (USD per million tokens, as of 2025)
+    # -----------------------------------------------------------------------
+    "qwen-plus": {"input": 0.40, "cached_input": 0.04, "output": 1.20, "batch": 1.0},
+    "qwen-turbo": {"input": 0.05, "cached_input": 0.005, "output": 0.20, "batch": 1.0},
+    "qwen-max": {"input": 1.60, "cached_input": 0.16, "output": 6.40, "batch": 1.0},
+    "qwen-long": {"input": 0.05, "cached_input": 0.005, "output": 0.20, "batch": 1.0},
 }
 
 
@@ -512,8 +575,13 @@ def _decide_default_max_output_tokens(
 
 
 def _lookup_model_pricing(model: str) -> Optional[Dict[str, float]]:
-    """Find a pricing entry for ``model`` by prefix match (case‑insensitive)."""
-    key = model.lower()
+    """Find a pricing entry for ``model`` by prefix match (case‑insensitive).
+
+    Provider prefixes (e.g. ``"deepseek/"`` in ``"deepseek/deepseek-chat"``) are
+    stripped before the lookup so that prefixed model names resolve correctly.
+    """
+    _, bare = parse_model_provider(model)
+    key = bare.lower()
     # Find the most specific prefix match by selecting the longest matching prefix.
     best_match: Optional[Dict[str, float]] = None
     best_len = -1
@@ -933,12 +1001,31 @@ def _is_multimodal_estimate(
 
 
 
-def _require_api_key() -> str:
-    """Return the API key or raise a runtime error if missing."""
-    api_key = os.getenv("OPENAI_API_KEY")
+def _require_api_key(provider: str = "openai") -> str:
+    """Return the API key for *provider* or raise a runtime error if missing.
+
+    For the default ``"openai"`` provider the key is read from
+    ``OPENAI_API_KEY``.  For other providers the matching
+    ``<PROVIDER_UPPER>_API_KEY`` variable is checked first, with an
+    optional built-in default for local servers (Ollama, LM Studio).
+
+    Parameters
+    ----------
+    provider:
+        Provider name as returned by :func:`~gabriel.core.providers.parse_model_provider`.
+    """
+    api_key = get_provider_api_key(provider)
     if not api_key:
+        cfg = get_provider_config(provider)
+        env_var = cfg.get("api_key_env", f"{provider.upper()}_API_KEY")
+        if provider == "openai":
+            raise RuntimeError(
+                "OPENAI_API_KEY environment variable must be set or passed via "
+                "ModelClient(api_key=...)."
+            )
         raise RuntimeError(
-            "OPENAI_API_KEY environment variable must be set or passed via OpenAIClient(api_key)."
+            f"No API key found for provider '{provider}'. "
+            f"Set the {env_var} environment variable."
         )
     return api_key
 
@@ -1885,9 +1972,13 @@ async def get_response(
         return dummy, 0.0
     if logging_level is not None:
         set_log_level(logging_level)
-    _require_api_key()
-    base_url = base_url or os.getenv("OPENAI_BASE_URL")
-    client_async = _get_client(base_url)
+    # Resolve provider and strip any prefix from the model name.
+    _provider, _bare_model = parse_model_provider(model)
+    _provider_api_key = get_provider_api_key(_provider)
+    _require_api_key(_provider)
+    _effective_base_url = get_provider_base_url(_provider, base_url)
+    client_async = _get_client(_effective_base_url, api_key=_provider_api_key)
+    _use_chat_api = uses_chat_completions(_provider)
 
     try:
         poll_interval = float(background_poll_interval)
@@ -2039,7 +2130,7 @@ async def get_response(
         # content.  Audio-capable models may require explicitly requesting
         # text output via ``modalities`` so we default to text when possible.
         params_chat: Dict[str, Any] = {
-            "model": model,
+            "model": _bare_model,
             "messages": messages,
             "temperature": temperature,
         }
@@ -2102,6 +2193,100 @@ async def get_response(
         if return_raw:
             return texts, duration, raw
         return texts, duration
+    elif _use_chat_api:
+        # ------------------------------------------------------------------ #
+        # Non-OpenAI providers (DeepSeek, Qwen, Ollama, OpenRouter, etc.)     #
+        # These providers expose an OpenAI-compatible Chat Completions API but #
+        # do not support the newer OpenAI Responses API.                       #
+        # ------------------------------------------------------------------ #
+        if images:
+            # Build a multimodal content list for providers that support vision.
+            user_content: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
+            for img in images:
+                img_url = (
+                    img if str(img).startswith("data:") else f"data:image/jpeg;base64,{img}"
+                )
+                img_payload: Dict[str, Any] = {"type": "image_url", "image_url": {"url": img_url}}
+                if normalised_image_detail is not None:
+                    img_payload["image_url"]["detail"] = normalised_image_detail
+                user_content.append(img_payload)
+            chat_messages: List[Dict[str, Any]] = [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": user_content},
+            ]
+        else:
+            chat_messages = [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt},
+            ]
+        params_provider: Dict[str, Any] = {
+            "model": _bare_model,
+            "messages": chat_messages,
+            "temperature": temperature,
+        }
+        if cutoff is not None:
+            params_provider["max_tokens"] = cutoff
+        if json_mode:
+            params_provider["response_format"] = {"type": "json_object"}
+        if tools is not None:
+            params_provider["tools"] = tools
+        if tool_choice is not None:
+            params_provider["tool_choice"] = tool_choice
+        # Forward any extra kwargs (provider may accept additional parameters)
+        _unsupported = {
+            "web_search", "web_search_filters", "search_context_size",
+            "reasoning_effort", "reasoning_summary", "include",
+        }
+        for k, v in kwargs.items():
+            if k not in _unsupported:
+                params_provider[k] = v
+        start = time.time()
+        provider_tasks: List[asyncio.Task] = [
+            asyncio.create_task(
+                client_async.chat.completions.create(
+                    **params_provider,
+                    **({"timeout": timeout} if timeout is not None else {}),
+                )
+            )
+            for _ in range(max(n, 1))
+        ]
+        if request_phase_callback is not None:
+            request_phase_callback("awaiting_response", len(provider_tasks))
+        try:
+            raw_provider = await asyncio.gather(*provider_tasks)
+        except asyncio.CancelledError:
+            for t in provider_tasks:
+                t.cancel()
+            raise
+        except asyncio.TimeoutError as exc:
+            message = (
+                f"API call timed out after {timeout} s"
+                if timeout is not None
+                else "API call timed out"
+            )
+            logger.error(f"[get_response] {message}")
+            raise asyncio.TimeoutError(message) from exc
+        except (RateLimitError, APIConnectionError) as e:
+            logger.debug("[get_response] API call resulted in exception: %r", e)
+            raise
+        except Exception as e:
+            logger.error(
+                "[get_response] API call resulted in exception: %r", e, exc_info=True
+            )
+            raise
+        finally:
+            if request_phase_callback is not None:
+                request_phase_callback("awaiting_response", -len(provider_tasks))
+        provider_texts: List[Optional[str]] = []
+        for r in raw_provider:
+            try:
+                provider_texts.append(r.choices[0].message.content)
+            except (AttributeError, IndexError):
+                provider_texts.append(None)
+        duration = time.time() - start
+        if return_raw:
+            return provider_texts, duration, raw_provider
+        return provider_texts, duration
     else:
         if images or pdfs:
             contents: List[Dict[str, Any]] = [{"type": "input_text", "text": prompt}]
@@ -2153,7 +2338,7 @@ async def get_response(
             )
 
         params = _build_params(
-            model=model,
+            model=_bare_model,
             input_data=input_data,
             max_output_tokens=cutoff,
             temperature=temperature,
@@ -3781,7 +3966,11 @@ async def get_all_responses(
     if message_verbose:
         print("Initializing model calls and loading data...")
     if api_key is not None:
-        os.environ["OPENAI_API_KEY"] = api_key
+        # For OpenAI set the standard env var; for other providers set the
+        # provider-specific variable so that get_response picks it up correctly.
+        _cfg = get_provider_config(_gar_provider)
+        _key_env = _cfg.get("api_key_env", "OPENAI_API_KEY")
+        os.environ[_key_env] = api_key
     response_callable = response_fn or get_response
     provided_api_key = api_key
     underlying_callable = response_callable
@@ -3794,8 +3983,22 @@ async def get_all_responses(
     using_custom_response_fn = response_fn is not None and underlying_callable is not get_response
     manage_rate_limits = not using_custom_response_fn
     planning_buffer = float(min(max(planning_rate_limit_buffer, 0.1), 1.0))
+    # Resolve provider from model name prefix (e.g. "deepseek/deepseek-chat").
+    _gar_provider, _gar_bare_model = parse_model_provider(model)
+    # Inject provider-specific base URL when none was explicitly provided.
+    if base_url is None:
+        _provider_base = get_provider_base_url(_gar_provider)
+        if _provider_base:
+            base_url = _provider_base
+    # Batch mode is only supported by OpenAI; disable it silently for others.
+    if use_batch and not supports_batch(_gar_provider):
+        logger.warning(
+            "Provider '%s' does not support batch mode; falling back to streaming.",
+            _gar_provider,
+        )
+        use_batch = False
     if not use_dummy and not using_custom_response_fn:
-        _require_api_key()
+        _require_api_key(_gar_provider)
     _ensure_runtime_dependencies(verbose=message_verbose)
     try:
         estimated_output_tokens_per_prompt = int(
@@ -4024,7 +4227,11 @@ async def get_all_responses(
                 )
                 logger.info(web_search_parallel_note)
     if not use_batch and not use_dummy and not using_custom_response_fn:
-        _get_client(base_url, desired_parallelism=user_requested_n_parallels)
+        _get_client(
+            base_url,
+            desired_parallelism=user_requested_n_parallels,
+            api_key=get_provider_api_key(_gar_provider),
+        )
     web_search_warning_displayed = False
     web_search_note_displayed = False
     # Decide default cutoff once per job using cached rate headers
@@ -4486,7 +4693,7 @@ async def get_all_responses(
                 df = pd.concat([df, batch_df], ignore_index=True)
             written_identifiers.update(batch_df["Identifier"].astype(str))
 
-        client = _get_client(base_url)
+        client = _get_client(base_url, api_key=get_provider_api_key(_gar_provider))
         # Load existing state
         if os.path.exists(state_path) and not reset_files:
             with open(state_path, "r") as f:

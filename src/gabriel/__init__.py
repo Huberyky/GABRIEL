@@ -1,4 +1,30 @@
-"""GABRIEL: LLM-based social science analysis toolkit."""
+"""GABRIEL: LLM-based social science analysis toolkit.
+
+Multi-model support
+-------------------
+GABRIEL supports any OpenAI-compatible backend through a provider prefix
+convention on the model name::
+
+    # OpenAI (default – no prefix needed)
+    await gabriel.rate(df, "text", attributes={...}, model="gpt-5-mini", ...)
+
+    # DeepSeek  (set DEEPSEEK_API_KEY)
+    await gabriel.rate(df, "text", attributes={...}, model="deepseek/deepseek-chat", ...)
+
+    # Alibaba Qwen  (set DASHSCOPE_API_KEY)
+    await gabriel.rate(df, "text", attributes={...}, model="qwen/qwen-plus", ...)
+
+    # Local Ollama  (no API key required)
+    await gabriel.rate(df, "text", attributes={...}, model="ollama/llama3.2", ...)
+
+    # OpenRouter  (set OPENROUTER_API_KEY)
+    await gabriel.rate(df, "text", attributes={...}, model="openrouter/meta-llama/llama-3-8b-instruct", ...)
+
+Use :class:`ModelClient` for lower-level access or to list all supported
+providers::
+
+    gabriel.ModelClient.list_providers()
+"""
 
 from importlib.metadata import PackageNotFoundError, version as _v
 
@@ -26,6 +52,17 @@ from .api import (
     poll,
 )
 from .utils import load
+from .core.llm_client import ModelClient, OpenAIClient
+from .core.providers import (
+    PROVIDER_CONFIGS,
+    get_provider_api_key,
+    get_provider_base_url,
+    get_provider_config,
+    list_providers,
+    parse_model_provider,
+    supports_batch,
+    uses_chat_completions,
+)
 
 try:
     __version__ = _v("gabriel")
@@ -54,6 +91,17 @@ __all__ = list(_tasks.__all__) + [
     "view",
     "bucket",
     "load",
+    # Multi-model support
+    "ModelClient",
+    "OpenAIClient",
+    "PROVIDER_CONFIGS",
+    "list_providers",
+    "parse_model_provider",
+    "get_provider_config",
+    "get_provider_api_key",
+    "get_provider_base_url",
+    "supports_batch",
+    "uses_chat_completions",
 ]
 
 

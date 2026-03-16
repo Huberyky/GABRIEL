@@ -3,9 +3,9 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "openai-gabriel"
-version = "1.1.5"
-description = "LLM-based library to measure quantitative attributes on qualitative data"
+name = "gabriel"
+version = "1.2.0"
+description = "LLM-based library to measure quantitative attributes on qualitative data – supports OpenAI, DeepSeek, Qwen, Ollama and any OpenAI-compatible backend"
 authors = [
     {name = "Hemanth Asirvatham"},
     {name = "Elliott Mokski"},
@@ -17,6 +17,10 @@ keywords = [
     "llm",
     "gpt",
     "openai",
+    "deepseek",
+    "qwen",
+    "ollama",
+    "multi-model",
     "ai",
     "research",
     "academic",
