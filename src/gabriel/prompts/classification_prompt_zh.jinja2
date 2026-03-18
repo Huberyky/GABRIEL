@@ -1,0 +1,27 @@
+{% import "snippets.jinja2" as snip %}
+{% if differentiate %}
+{{ snip.pair_entries(modality, entry_square, entry_circle, circle_first=circle_first|default(false)) }}
+{% else %}
+{{ snip.single_entry(modality, text) }}
+{% endif %}
+
+任务：判断下列标签是否适用于给定内容。
+
+BEGIN LABELS
+{{ attributes | shuffled_dict }}
+END LABELS
+
+规则：
+- 适用输出 True，不适用输出 False
+- 每个标签独立判断
+- 输出必须是 JSON，且标签名必须与输入完全一致
+
+输出 JSON：
+{
+  "<标签名>": true
+}
+
+{% if additional_instructions %}
+补充说明：
+{{ additional_instructions }}
+{% endif %}

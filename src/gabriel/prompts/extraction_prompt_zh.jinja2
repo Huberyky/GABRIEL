@@ -1,0 +1,24 @@
+{% import "snippets.jinja2" as snip %}
+{{ snip.single_entry(modality, text) }}
+
+任务：针对下列每个属性，提取最准确的值，并以字符串返回。
+若无法确定，请返回 "unknown"。
+
+BEGIN ATTRIBUTES
+{{ attributes | shuffled_dict }}
+END ATTRIBUTES
+
+输出 JSON：
+{
+  "<实体名>": {
+    "<属性名>": "<提取值或unknown>"
+  }
+}
+
+如果整段内容只对应一个实体，只输出一个顶层实体即可。
+属性名必须与输入完全一致。
+
+{% if additional_instructions %}
+补充说明：
+{{ additional_instructions }}
+{% endif %}

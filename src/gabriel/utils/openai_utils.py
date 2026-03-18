@@ -124,6 +124,7 @@ except Exception:
     RateLimitError = Exception  # type: ignore
 
 from gabriel.utils.parsing import parse_json_with_status, safe_json
+from gabriel.utils.model_utils import strip_reasoning_tags
 
 # single connection pool per process, keyed by base URL and created lazily
 _clients_async: Dict[Optional[str], openai.AsyncOpenAI] = {}
@@ -290,6 +291,11 @@ class BackgroundTimeoutError(asyncio.TimeoutError):
         self.response_id = response_id
         self.last_response = last_response
 
+
+
+
+def _sanitize_response_payload(payload: Any) -> Any:
+    return strip_reasoning_tags(payload)
 
 class JSONParseError(ValueError):
     """Raised when JSON parsing fails during JSON-mode requests."""
@@ -460,6 +466,11 @@ MODEL_PRICING: Dict[str, Dict[str, float]] = {
         "output": 8.00,
         "batch": 0.5,
     },
+    "deepseek-chat": {"input": 0.27, "cached_input": 0.27, "output": 1.10, "batch": 1.0},
+    "deepseek-reasoner": {"input": 0.55, "cached_input": 0.55, "output": 2.19, "batch": 1.0},
+    "qwen-plus": {"input": 0.40, "cached_input": 0.40, "output": 1.20, "batch": 1.0},
+    "qwen-turbo": {"input": 0.05, "cached_input": 0.05, "output": 0.20, "batch": 1.0},
+    "qwen-max": {"input": 1.60, "cached_input": 1.60, "output": 6.40, "batch": 1.0},
 }
 
 

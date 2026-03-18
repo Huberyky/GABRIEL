@@ -7,6 +7,9 @@ from .api import (
     rate,
     classify,
     extract,
+    reliability,
+    validate,
+    robustness,
     deidentify,
     rank,
     codify,
@@ -54,6 +57,9 @@ __all__ = list(_tasks.__all__) + [
     "view",
     "bucket",
     "load",
+    "reliability",
+    "validate",
+    "robustness",
 ]
 
 
