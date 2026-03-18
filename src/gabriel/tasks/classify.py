@@ -22,6 +22,7 @@ from ..utils import (
 )
 from ..utils.logging import announce_prompt_rendering
 from ..utils.file_utils import save_dataframe_with_fallback
+from ..utils.model_utils import strip_reasoning_tags, prompt_hash, write_run_metadata, load_incremental_cache
 from ._attribute_utils import load_persisted_attributes
 
 
@@ -61,6 +62,8 @@ class ClassifyConfig:
     modality: str = "text"
     n_attributes_per_run: int = 8
     reasoning_effort: Optional[str] = None
+    prompt_language: str = "en"
+    incremental: bool = False
     differentiate: bool = False
     circle_first: Optional[bool] = None
     search_context_size: str = "medium"
@@ -98,7 +101,7 @@ class Classify:
         self.template = resolve_template(
             template=template,
             template_path=template_path,
-            reference_filename="classification_prompt.jinja2",
+            reference_filename="classification_prompt_zh.jinja2" if str(cfg.prompt_language).lower().startswith("zh") else "classification_prompt.jinja2",
         )
 
     # -----------------------------------------------------------------
@@ -173,6 +176,15 @@ class Classify:
 
         df_proc = df.reset_index(drop=True).copy()
         base_name = os.path.splitext(self.cfg.file_name)[0]
+        write_run_metadata(
+            self.cfg.save_dir,
+            task_name="Classify",
+            model=self.cfg.model,
+            prompt_hash_value=prompt_hash(self.template.text, self.cfg.additional_instructions, extra={"attributes": getattr(self.cfg, "attributes", getattr(self.cfg, "labels", {})), "language": self.cfg.prompt_language}),
+            prompt_language=self.cfg.prompt_language,
+            additional_instructions=self.cfg.additional_instructions,
+            incremental=self.cfg.incremental,
+        )
 
         self.cfg.labels = load_persisted_attributes(
             save_dir=self.cfg.save_dir,
@@ -426,7 +438,14 @@ class Classify:
                     if pdfs:
                         prompt_pdfs_all[run_ident] = pdfs
 
-        df_resp_all = await get_all_responses(
+        cached_clean_path = load_incremental_cache(self.cfg.save_dir, self.cfg.file_name) if self.cfg.incremental and not reset_files else None
+        if cached_clean_path is not None:
+            print(f"[Classify] Incremental mode detected existing cleaned file at {cached_clean_path}.")
+
+        get_all_responses_fn = kwargs.pop("get_all_responses_fn", None)
+        responder = get_all_responses_fn or get_all_responses
+
+        df_resp_all = await responder(
             prompts=prompts_all,
             identifiers=ids_all,
             prompt_images=prompt_images_all,
@@ -472,7 +491,7 @@ class Classify:
                     continue
                 batch_idx = int(batch_part)
                 labs = list(label_batches[batch_idx].keys())
-                parsed = await self._parse(raw, labs)
+                parsed = await self._parse(strip_reasoning_tags(raw), labs)
                 for lab in labs:
                     id_to_labels[base_ident][lab] = parsed.get(lab)
             total_orphans += orphans
@@ -509,6 +528,10 @@ class Classify:
                 index=True,
                 label="Classify",
             )
+
+        parse_failures = int(full_df[list(self.cfg.labels)].isna().all(axis=1).sum())
+        parse_report = pd.DataFrame([{"task": "classify", "rows": len(full_df), "parse_failures": parse_failures, "parse_success_rate": 1 - (parse_failures / max(1, len(full_df)))}])
+        save_dataframe_with_fallback(parse_report, os.path.join(self.cfg.save_dir, f"{base_name}_parse_report.csv"), index=False, label="Classify")
 
         # aggregate across runs using a minimum frequency threshold
         def _min_freq(s: pd.Series) -> Optional[bool]:
@@ -548,6 +571,11 @@ class Classify:
             result = df_proc.merge(
                 agg_df, left_on=column_name, right_index=True, how="left"
             )
+        if self.cfg.incremental and cached_clean_path is not None:
+            cached = pd.read_csv(cached_clean_path)
+            if "predicted_classes" in cached.columns:
+                cached["predicted_classes"] = cached["predicted_classes"].apply(lambda x: json.loads(x) if isinstance(x, str) and x.startswith("[") else x)
+            result = result.combine_first(cached.reindex(columns=result.columns))
 
         label_cols = list(self.cfg.labels.keys())
 

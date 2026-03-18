@@ -45,6 +45,7 @@ from .tasks import (
 )
 from .utils.openai_utils import get_all_responses, get_response
 from .utils.passage_viewer import view as _view_passages
+from .analysis import reliability as _reliability, validate as _validate, robustness as _robustness
 from .tasks.debias import (
     DebiasConfig,
     DebiasPipeline,
@@ -74,6 +75,9 @@ __all__ = [
     "debias",
     "whatever",
     "view",
+    "reliability",
+    "validate",
+    "robustness",
 ]
 
 
@@ -201,6 +205,8 @@ async def rate(
     reasoning_effort: Optional[str] = None,
     search_context_size: str = "medium",
     template_path: Optional[str] = None,
+    prompt_language: str = "en",
+    incremental: bool = False,
     response_fn: Optional[Callable[..., Awaitable[Any]]] = None,
     get_all_responses_fn: Optional[Callable[..., Awaitable[pd.DataFrame]]] = None,
     **cfg_kwargs,
@@ -291,6 +297,8 @@ async def rate(
         modality=modality,
         reasoning_effort=reasoning_effort,
         search_context_size=search_context_size,
+        prompt_language=prompt_language,
+        incremental=incremental,
         **cfg_kwargs,
     )
     return await Rate(cfg, template_path=template_path).run(
@@ -319,6 +327,8 @@ async def extract(
     reasoning_effort: Optional[str] = None,
     types: Optional[Dict[str, Any]] = None,
     template_path: Optional[str] = None,
+    prompt_language: str = "en",
+    incremental: bool = False,
     response_fn: Optional[Callable[..., Awaitable[Any]]] = None,
     get_all_responses_fn: Optional[Callable[..., Awaitable[pd.DataFrame]]] = None,
     **cfg_kwargs,
@@ -405,6 +415,8 @@ async def extract(
         additional_instructions=additional_instructions,
         modality=modality,
         reasoning_effort=reasoning_effort,
+        prompt_language=prompt_language,
+        incremental=incremental,
         **cfg_kwargs,
     )
     return await Extract(cfg, template_path=template_path).run(
@@ -433,6 +445,8 @@ async def seed(
     deduplicate_sample_seed: int = 42,
     reasoning_effort: Optional[str] = None,
     template_path: Optional[str] = None,
+    prompt_language: str = "en",
+    incremental: bool = False,
     existing_entities: Optional[List[str]] = None,
     reset_files: bool = False,
     response_fn: Optional[Callable[..., Awaitable[Any]]] = None,
@@ -2670,3 +2684,18 @@ def view(
         font_family=font_family,
         color_mode=color_mode,
     )
+
+
+def reliability(data, **kwargs):
+    """Aggregate multi-run outputs into reliability diagnostics."""
+    return _reliability(data, **kwargs)
+
+
+def validate(df: pd.DataFrame, **kwargs):
+    """Compare GABRIEL outputs against human annotations."""
+    return _validate(df, **kwargs)
+
+
+def robustness(df: pd.DataFrame, **kwargs):
+    """Run lightweight robustness checks across prompts/models/time slices."""
+    return _robustness(df, **kwargs)

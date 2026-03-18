@@ -1,0 +1,33 @@
+{% import "snippets.jinja2" as snip %}
+{{ snip.single_entry(modality, text) }}
+
+任务：针对下列每个属性，判断所给内容体现该属性的强度。
+
+BEGIN ATTRIBUTES
+{{ attributes | shuffled_dict }}
+END ATTRIBUTES
+每个字典键都是一个属性；如果提供了定义，请严格按定义判断，否则请保持一致的理解标准。
+
+BEGIN RATING SCALE
+{% if scale %}
+{{ scale }}
+{% else %}
+使用 0-100 的整数（含端点）。0=完全不存在，100=极强烈。
+使用完整区间与任意整数，不要只取 5 或 10 的倍数。
+{% endif %}
+END RATING SCALE
+
+规则：
+- 每个属性独立判断
+- 只根据文本中该属性的直接信号评分，不要由其他属性间接推断
+- 输出必须是 JSON，且属性名必须与输入完全一致
+
+输出 JSON：
+{
+  "<属性名>": <整数评分>
+}
+
+{% if additional_instructions %}
+补充说明：
+{{ additional_instructions }}
+{% endif %}

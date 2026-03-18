@@ -25,6 +25,7 @@ from ..utils import (
 )
 from ..utils.logging import announce_prompt_rendering
 from ..utils.file_utils import save_dataframe_with_fallback
+from ..utils.model_utils import strip_reasoning_tags, prompt_hash, write_run_metadata, load_incremental_cache
 from ._attribute_utils import load_persisted_attributes
 
 
@@ -45,6 +46,8 @@ class RateConfig:
     modality: str = "text"
     n_attributes_per_run: int = 8
     reasoning_effort: Optional[str] = None
+    prompt_language: str = "en"
+    incremental: bool = False
     search_context_size: str = "medium"
 
     def __post_init__(self) -> None:
@@ -74,7 +77,7 @@ class Rate:
         self.template = resolve_template(
             template=template,
             template_path=template_path,
-            reference_filename="ratings_prompt.jinja2",
+            reference_filename="ratings_prompt_zh.jinja2" if str(cfg.prompt_language).lower().startswith("zh") else "ratings_prompt.jinja2",
         )
 
     # -----------------------------------------------------------------
@@ -110,6 +113,15 @@ class Rate:
         values = df_proc[column_name].tolist()
         texts = [str(v) for v in values]
         base_name = os.path.splitext(self.cfg.file_name)[0]
+        write_run_metadata(
+            self.cfg.save_dir,
+            task_name="Rate",
+            model=self.cfg.model,
+            prompt_hash_value=prompt_hash(self.template.text, self.cfg.additional_instructions, extra={"attributes": getattr(self.cfg, "attributes", getattr(self.cfg, "labels", {})), "language": self.cfg.prompt_language}),
+            prompt_language=self.cfg.prompt_language,
+            additional_instructions=self.cfg.additional_instructions,
+            incremental=self.cfg.incremental,
+        )
 
         warn_if_modality_mismatch(values, self.cfg.modality, column_name=column_name)
 
@@ -263,7 +275,14 @@ class Rate:
                     if pdfs:
                         prompt_pdfs_all[run_ident] = pdfs
 
-        df_resp_all = await get_all_responses(
+        cached_clean_path = load_incremental_cache(self.cfg.save_dir, self.cfg.file_name) if self.cfg.incremental and not reset_files else None
+        if cached_clean_path is not None:
+            print(f"[Rate] Incremental mode detected existing cleaned file at {cached_clean_path}.")
+
+        get_all_responses_fn = kwargs.pop("get_all_responses_fn", None)
+        responder = get_all_responses_fn or get_all_responses
+
+        df_resp_all = await responder(
             prompts=prompts_all,
             identifiers=ids_all,
             prompt_images=prompt_images_all,
@@ -318,7 +337,7 @@ class Rate:
                     if debug:
                         print(f"[Rate] Skipping unknown identifier {base_ident}")
                     continue
-                parsed = await self._parse(main, attrs)
+                parsed = await self._parse(strip_reasoning_tags(main), attrs)
                 for attr in attrs:
                     id_to_ratings[base_ident][attr] = parsed.get(attr)
             for ident in base_ids:
@@ -339,11 +358,21 @@ class Rate:
                 label="Rate",
             )
 
+        parse_failures = int(full_df[list(self.cfg.attributes)].isna().all(axis=1).sum())
+        parse_report = pd.DataFrame([{"task": "rate", "rows": len(full_df), "parse_failures": parse_failures, "parse_success_rate": 1 - (parse_failures / max(1, len(full_df)))}])
+        save_dataframe_with_fallback(parse_report, os.path.join(self.cfg.save_dir, f"{base_name}_parse_report.csv"), index=False, label="Rate")
+
         # aggregate across runs
         agg_df = full_df.groupby("id")[list(self.cfg.attributes)].mean()
 
         out_path = os.path.join(self.cfg.save_dir, f"{base_name}_cleaned.csv")
         result = df_proc.merge(agg_df, left_on="_gid", right_index=True, how="left")
+        if self.cfg.incremental and cached_clean_path is not None:
+            cached = pd.read_csv(cached_clean_path)
+            missing_cols = [c for c in cached.columns if c not in result.columns]
+            for c in missing_cols:
+                result[c] = pd.NA
+            result = result.combine_first(cached.reindex(columns=result.columns))
         result = result.drop(columns=["_gid"])
         save_dataframe_with_fallback(result, out_path, index=False, label="Rate")
 
